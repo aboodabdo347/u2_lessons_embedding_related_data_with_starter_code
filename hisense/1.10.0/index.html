@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#000000"/>
+  <title>Stremio - Freedom to Stream (Hisense Font Fix)</title>
+  <link rel="stylesheet" href="font-override.css"/>
+  <style>* { font-family: sans-serif !important; }</style>
+  <script defer="defer" src="https://wn7lso8ghdka.stremio.com/hisense/1.10.0/runtime.js"></script>
+  <script defer="defer" src="https://wn7lso8ghdka.stremio.com/hisense/1.10.0/main.js"></script>
+  <script defer="defer" src="https://wn7lso8ghdka.stremio.com/hisense/1.10.0/service.js"></script>
+  <script defer="defer" src="https://wn7lso8ghdka.stremio.com/hisense/1.10.0/webOSTV.js"></script>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+</body>
+<script>
+  setTimeout(function() {
+    window.screen720p = false;
+    try {
+      if (Hisense_GetFirmWareVersion() && window.innerHeight === 720) {
+        window.screen720p = true;
+      }
+    } catch(e) {}
+    if (window.screen720p) {
+      document.body.style.zoom = '65%';
+    }
+  });
+</script>
+</html>
