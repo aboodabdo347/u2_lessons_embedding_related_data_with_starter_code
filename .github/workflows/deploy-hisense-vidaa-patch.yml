@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - .github/workflows/deploy-hisense-vidaa-patch.yml
+      - scripts/deploy-hisense-patch.js
   workflow_dispatch:
 
 permissions:
@@ -21,6 +22,12 @@ jobs:
           ref: gh-pages
           path: site
 
+      - name: Check out patch script
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -30,163 +37,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd site
-          mkdir -p hisense/1.10.0
-          cd hisense/1.10.0
-
-          cat > index.html <<'HTML'
-          <!doctype html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width,initial-scale=1"/>
-            <meta name="theme-color" content="#000000"/>
-            <title>Stremio - Freedom to Stream (Hisense Vidaa)</title>
-            <link rel="stylesheet" href="font-override.css"/>
-            <style>* { font-family: sans-serif !important; }</style>
-            <script defer="defer" src="https://wn7lso8ghdka.stremio.com/hisense/1.10.0/runtime.js"></script>
-            <script defer="defer" src="player.chunk.js"></script>
-            <script defer="defer" src="search.chunk.js"></script>
-            <script defer="defer" src="main.js"></script>
-            <script defer="defer" src="https://wn7lso8ghdka.stremio.com/hisense/1.10.0/service.js"></script>
-            <script defer="defer" src="https://wn7lso8ghdka.stremio.com/hisense/1.10.0/webOSTV.js"></script>
-          </head>
-          <body>
-            <noscript>You need to enable JavaScript to run this app.</noscript>
-            <div id="root"></div>
-          </body>
-          <script>
-            setTimeout(function() {
-              window.screen720p = false;
-              try {
-                if (Hisense_GetFirmWareVersion() && window.innerHeight === 720) {
-                  window.screen720p = true;
-                }
-              } catch(e) {}
-              if (window.screen720p) {
-                document.body.style.zoom = '65%';
-              }
-            });
-          </script>
-          </html>
-          HTML
-
-          cat > patch-hisense.js <<'JS'
-          const fs = require('fs/promises');
-          const base = 'https://wn7lso8ghdka.stremio.com/hisense/1.10.0/';
-
-          async function download(name) {
-            const response = await fetch(base + name);
-            if (!response.ok) throw new Error(`${name}: ${response.status} ${response.statusText}`);
-            return response.text();
-          }
-
-          function replaceOnce(source, needle, replacement, label) {
-            if (!source.includes(needle)) throw new Error(`Missing patch target: ${label}`);
-            return source.replace(needle, () => replacement);
-          }
-
-          function patchMain(source) {
-            source = replaceOnce(
-              source,
-              "@font-face {\\n  font-family: 'PlusJakartaSans';\\n  font-weight: 100 1000;\\n  src: url(${d}) format('truetype');\\n}",
-              "/* @font-face removed */) format('truetype');\\n}",
-              'main font face'
-            );
-            source = source.replaceAll("font-family: 'PlusJakartaSans';", 'font-family: sans-serif;');
-            source = replaceOnce(
-              source,
-              "font-family: 'PlusJakartaSans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;",
-              'font-family: sans-serif;',
-              'main body font'
-            );
-            source = replaceOnce(
-              source,
-              'seekNext:[418,417,176,208]}',
-              'seekNext:[418,417,176,208],green:[404],yellow:[405]}',
-              'main remote key map'
-            );
-            source = replaceOnce(
-              source,
-              'const Qt=e=>{const{ref:t,focus:n}=(0,i.Wc)(),a=()=>{n()},l=({target:t})=>{const{value:n}=t;e.onInput&&e.onInput(n)},s=({target:t})=>{const{value:n}=t;e.onChange&&e.onChange(n)},c=({target:t})=>{const{value:n}=t;e.onSubmit&&e.onSubmit(n)};return(0,o.Rc)((()=>{e.autoFocus&&n()})),(u=Xt()).addEventListener("submit",c),u.addEventListener("change",s),u.$$input=l',
-              'const Qt=e=>{const{ref:t,focus:n}=(0,i.Wc)(),a=()=>{n()},l=({target:t})=>{const{value:n}=t;e.onInput&&e.onInput(n)},s=({target:t})=>{const{value:n}=t;e.onChange&&e.onChange(n)},c=({target:t})=>{const{value:n}=t;e.onSubmit&&e.onSubmit(n)},d=t=>{const n=t.keyCode||t.which;(13===n||405===n)&&(t.preventDefault(),e.onSubmit&&e.onSubmit(t.target.value)),e.onKeyDown&&e.onKeyDown(t)};return(0,o.Rc)((()=>{e.autoFocus&&n()})),(u=Xt()).addEventListener("submit",c),u.addEventListener("change",s),u.addEventListener("keydown",d),u.$$input=l',
-              'main text input keydown'
-            );
-            source = replaceOnce(
-              source,
-              't("seekNext")&&(e.preventDefault(),y("seekNext"))}',
-              't("seekNext")&&(e.preventDefault(),y("seekNext")),t("green")&&(e.preventDefault(),y("green")),t("yellow")&&(e.preventDefault(),y("yellow"))}',
-              'main color key dispatch'
-            );
-            return source;
-          }
-
-          function patchSearch(source) {
-            source = replaceOnce(
-              source,
-              '[E,w]=(0,a.n5)(null),[C,Y,K]=(0,o.zD)(),k=()=>',
-              '[E,w]=(0,a.n5)(null),[C,Y,K]=(0,o.zD)(),q=(0,G.cq)(),k=()=>',
-              'search nav service'
-            );
-            source = replaceOnce(
-              source,
-              'P=e=>{g({query:e})},T=e=>{b(e)}',
-              'P=e=>{g({query:e})},D=()=>{P(k())},B=e=>{const n=e.keyCode||e.which;(13===n||405===n)&&(e.preventDefault(),P(e.target.value))},T=e=>{b(e)}',
-              'search submit handlers'
-            );
-            source = replaceOnce(
-              source,
-              '(0,a.Ki)((()=>{v.unload()}))',
-              '(0,a.Rc)((()=>{q.on("yellow",D)})),(0,a.Ki)((()=>{q.off("yellow",D),v.unload()}))',
-              'search yellow lifecycle'
-            );
-            source = replaceOnce(
-              source,
-              'get children(){return(0,a.a0)(l.ks,{get placeholder(){return d("STREMIO_TV_SEARCH_PLACEHOLDER")},get value(){return k()},autoFocus:!0,onChange:P,onSubmit:P})}})',
-              'get children(){return[(0,a.a0)(l.ks,{get placeholder(){return d("STREMIO_TV_SEARCH_PLACEHOLDER")},get value(){return k()},autoFocus:!0,onInput:P,onChange:P,onSubmit:P,onKeyDown:B}),(0,a.a0)(l.$n,{icon:"search",onPress:D})]}})',
-              'search button'
-            );
-            source = replaceOnce(
-              source,
-              'padding: 2rem 4rem 1rem 4rem;\\n}\\n.search-guyhx .container-RxHME',
-              'padding: 2rem 4rem 1rem 4rem;\\n  display: flex;\\n  flex-direction: row;\\n  align-items: center;\\n}\\n.search-guyhx .heading-AvPuR > input {\\n  flex: 1 1 auto;\\n  min-width: 0;\\n}\\n.search-guyhx .heading-AvPuR > :last-child {\\n  flex: 0 0 auto;\\n  margin-left: 1rem;\\n}\\n.search-guyhx .container-RxHME',
-              'search CSS'
-            );
-            return source;
-          }
-
-          function patchPlayer(source) {
-            source = replaceOnce(
-              source,
-              'yn=()=>{!nn()&&!tn()&&!V()&&!j()&&we()},Sn=()=>{E(),Y(),L(),U(),q(),ne(),ie()},xn=()=>{Ie(!0),_(),we()};return',
-              'yn=()=>{!nn()&&!tn()&&!V()&&!j()&&we()},Sn=()=>{E(),Y(),L(),U(),q(),ne(),ie()},wn=()=>{Ze.audio().length&&(Sn(),H())},xn=()=>{Ie(!0),_(),we()};return',
-              'player green handler'
-            );
-            source = replaceOnce(
-              source,
-              'f.on("ok",kn),f.on("any",fn)',
-              'f.on("ok",kn),f.on("green",wn),f.on("any",fn)',
-              'player green listener'
-            );
-            source = replaceOnce(
-              source,
-              'f.off("ok",kn),f.off("any",fn)',
-              'f.off("ok",kn),f.off("green",wn),f.off("any",fn)',
-              'player green cleanup'
-            );
-            return source;
-          }
-
-          await fs.writeFile('main.js', patchMain(await download('main.js')));
-          await fs.writeFile('search.chunk.js', patchSearch(await download('search.chunk.js')));
-          await fs.writeFile('player.chunk.js', patchPlayer(await download('player.chunk.js')));
-          await fs.unlink('patch-hisense.js');
-          JS
-
-          node patch-hisense.js
-          node --check main.js
-          node --check search.chunk.js
-          node --check player.chunk.js
+          node source/scripts/deploy-hisense-patch.js site/hisense/1.10.0
+          node --check site/hisense/1.10.0/main.js
+          node --check site/hisense/1.10.0/search.chunk.js
+          node --check site/hisense/1.10.0/player.chunk.js
 
       - name: Commit Pages update
         shell: bash
