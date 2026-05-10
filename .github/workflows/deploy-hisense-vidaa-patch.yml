@@ -41,6 +41,7 @@ jobs:
           node --check site/hisense/1.10.0/main.js
           node --check site/hisense/1.10.0/search.chunk.js
           node --check site/hisense/1.10.0/player.chunk.js
+          node --check site/hisense/1.10.0/video.chunk.js
 
       - name: Commit Pages update
         shell: bash
@@ -49,7 +50,7 @@ jobs:
           cd site
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add hisense/1.10.0/index.html hisense/1.10.0/main.js hisense/1.10.0/player.chunk.js hisense/1.10.0/search.chunk.js
+          git add hisense/1.10.0/index.html hisense/1.10.0/main.js hisense/1.10.0/player.chunk.js hisense/1.10.0/search.chunk.js hisense/1.10.0/video.chunk.js
           if git diff --cached --quiet; then
             echo "No Pages changes to commit."
           else
